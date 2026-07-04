@@ -9,6 +9,7 @@ typedef struct {
     char exec[256];
     char restart[32];
     char timeout[32];
+    char autostart[8];
 } NService;
 
 /**
@@ -37,7 +38,6 @@ pid_t spawn_child(const char *path);
  * @return NService The populated NService structure, or an empty structure on error.
  */
 NService parse_nsv_file(const char *file_path);
-
 
 /**
  * @brief Runs a service based on the parsed nsv file.

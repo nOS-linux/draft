@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,6 +64,32 @@ int main(void) {
     setup_signals();
 
     spawn_child("/bin/sh"); // TODO: ntty
+
+    DIR *dir = opendir("/etc/ninit/services");
+    if (dir) {
+        struct dirent *ent;
+        while ((ent = readdir(dir))) {
+            size_t len = strlen(ent->d_name);
+            if (len < 5 || strcmp(ent->d_name + len - 4, ".nsv") != 0)
+                continue;
+
+            char path[296];
+            snprintf(path, sizeof(path), "/etc/ninit/services/%s", ent->d_name);
+
+            NService srv = parse_nsv_file(path);
+            if (srv.name[0] == '\0')
+                continue;
+
+            if (strcmp(srv.autostart, "false") == 0) {
+                printf("skipped %s\n", srv.name);
+                continue;
+            }
+
+            printf("started %s\n", srv.name);
+            run_service(&srv);
+        }
+        closedir(dir);
+    }
 
     while (1) {
         pause();

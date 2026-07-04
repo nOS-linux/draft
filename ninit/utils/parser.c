@@ -5,7 +5,7 @@
 
 #include "../ninit.h"
 
-const char *valid_keys[] = {"name", "description", "exec", "restart", "timeout"};
+const char *valid_keys[] = {"name", "description", "exec", "restart", "timeout", "autostart"};
 
 #define KEYS_COUNT (sizeof(valid_keys) / sizeof(valid_keys[0]))
 
@@ -29,6 +29,7 @@ static void trim_and_clean(char *dest, const char *src, size_t max_len) {
 NService parse_nsv_file(const char *file_path) {
     NService srv;
     memset(&srv, 0, sizeof(NService));
+    strcpy(srv.autostart, "true");
 
     FILE *file = fopen(file_path, "r");
     if (!file) {
@@ -80,6 +81,8 @@ NService parse_nsv_file(const char *file_path) {
             trim_and_clean(srv.restart, raw_val, sizeof(srv.restart));
         } else if (strcmp(key, "timeout") == 0) {
             trim_and_clean(srv.timeout, raw_val, sizeof(srv.timeout));
+        } else if (strcmp(key, "autostart") == 0) {
+            trim_and_clean(srv.autostart, raw_val, sizeof(srv.autostart));
         }
     }
     fclose(file);

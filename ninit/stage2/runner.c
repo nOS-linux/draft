@@ -8,40 +8,44 @@
 static int parse_exec_to_argv(char *exec_str, char **argv, int max_args) {
     int argc = 0;
     char *ptr = exec_str;
-    int in_quotes = 0;
+    char quote = 0;
     char *arg_start = NULL;
 
     while (*ptr && argc < max_args - 1) {
-        if (*ptr == '"') {
-            in_quotes = !in_quotes;
-            if (in_quotes && !arg_start) {
-                arg_start = ptr + 1;
-            } else if (!in_quotes) {
+        if (quote) {
+            if (*ptr == quote) {
                 *ptr = '\0';
                 argv[argc++] = arg_start;
                 arg_start = NULL;
+                quote = 0;
             }
             ptr++;
             continue;
         }
 
-        if (!in_quotes && (*ptr == ' ' || *ptr == '\t')) {
+        if (*ptr == '"' || *ptr == '\'') {
+            quote = *ptr;
+            if (!arg_start)
+                arg_start = ptr + 1;
+            ptr++;
+            continue;
+        }
+
+        if (*ptr == ' ' || *ptr == '\t') {
             if (arg_start) {
                 *ptr = '\0';
                 argv[argc++] = arg_start;
                 arg_start = NULL;
             }
         } else {
-            if (!arg_start) {
+            if (!arg_start)
                 arg_start = ptr;
-            }
         }
         ptr++;
     }
 
-    if (arg_start && argc < max_args - 1) {
+    if (arg_start && argc < max_args - 1)
         argv[argc++] = arg_start;
-    }
 
     argv[argc] = NULL;
     return argc;
