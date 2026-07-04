@@ -9,7 +9,7 @@ INITRAMFS_FILE="$OUTDIR/nos-initramfs-${KVER}.img"
 
 trap "rm -rf $ISODIR_TMP" EXIT
 
-echo "=== nOS ISO builder ==="
+echo "nOS ISO builder"
 echo "Kernel: $KVER"
 
 if [ ! -f "$INITRAMFS_FILE" ]; then
@@ -28,7 +28,7 @@ set timeout=5
 set default=0
 
 menuentry "nOS" {
-    linux /boot/vmlinuz-linux-zen console=tty1 loglevel=0
+    linux /boot/vmlinuz-linux-zen console=tty1 loglevel=0 hostname=nOS
     initrd /boot/nos-initramfs-${KVER}.img
 }
 GRUB
@@ -36,4 +36,4 @@ GRUB
 ISO_OUT="$OUTDIR/nos-${KVER}.iso"
 grub-mkrescue -o "$ISO_OUT" "$ISODIR_TMP"
 
-echo "=== Done: nos-${KVER}.iso ($(du -h "$ISO_OUT" | cut -f1)) ==="
+echo "Done: nos-${KVER}.iso ($(du -h "$ISO_OUT" | cut -f1))"

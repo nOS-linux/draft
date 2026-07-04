@@ -9,7 +9,7 @@ MODULES_SRC="/lib/modules/$KVER"
 
 trap "rm -rf $INITRAMFS_TMP" EXIT
 
-echo "=== nOS initramfs builder ==="
+echo "nOS initramfs builder"
 echo "Kernel: $KVER"
 
 mkdir -p "$INITRAMFS_TMP"/{bin,dev,etc,proc,sys,mnt,run,new_root}
@@ -27,9 +27,12 @@ for applet in mount switch_root findfs blkid modprobe insmod rmmod lsmod; do
     ln -s /bin/busybox "$INITRAMFS_TMP/sbin/$applet" 2>/dev/null || true
 done
 
+mkdir -p "$INITRAMFS_TMP/etc"
+cp "$SRCDIR/os-release" "$INITRAMFS_TMP/etc/os-release"
 cp "$SRCDIR/ninit/stage1/init.sh" "$INITRAMFS_TMP/init"
 cp "$SRCDIR/ninit/stage2/ninit" "$INITRAMFS_TMP/sbin/ninit"
 cp "$SRCDIR/ninit/stage1/n.sh" "$INITRAMFS_TMP/"
+cp "$SRCDIR/pfetch" "$INITRAMFS_TMP/bin/pfetch"
 chmod +x "$INITRAMFS_TMP/init" "$INITRAMFS_TMP/n.sh"
 
 if [ -d "$MODULES_SRC/kernel/drivers/nvme" ]; then
@@ -60,4 +63,4 @@ INITRAMFS_OUT="$OUTDIR/nos-initramfs-${KVER}.img"
     find . -print0 | cpio --null -o --format=newc 2>/dev/null | gzip -9 > "$INITRAMFS_OUT"
 )
 
-echo "=== Done: nos-initramfs-${KVER}.img ($(du -h "$INITRAMFS_OUT" | cut -f1)) ==="
+echo "Done: nos-initramfs-${KVER}.img ($(du -h "$INITRAMFS_OUT" | cut -f1))"
