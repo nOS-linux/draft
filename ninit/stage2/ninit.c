@@ -57,13 +57,6 @@ pid_t spawn_child(const char *path) {
     return pid;
 }
 
-void run_services(const char *services_path) {
-    pid_t pid = spawn_child("/bin/nparse -f kv -p  /etc/ninit/services/* kv");
-    if (pid < 0)
-        return;
-    
-}
-
 int main(void) {
     if (getpid() != 1)
         return EXIT_FAILURE;
