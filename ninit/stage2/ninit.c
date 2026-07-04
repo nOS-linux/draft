@@ -1,11 +1,12 @@
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "ninit.h"
+#include "../ninit.h"
 
 void reap_zombies(void) {
     int status;
@@ -46,8 +47,7 @@ void setup_signals(void) {
 pid_t spawn_child(const char *path) {
     pid_t pid = fork();
 
-    if (pid < 0)
-        return -1;
+    if (pid < 0) return -1;
 
     if (pid == 0) {
         char *args[] = {(char *)path, NULL};
@@ -58,8 +58,8 @@ pid_t spawn_child(const char *path) {
 }
 
 int main(void) {
-    if (getpid() != 1)
-        return EXIT_FAILURE;
+    printf("--- ninit stage 2 ---\n");
+    if (getpid() != 1) return EXIT_FAILURE;
     setup_signals();
 
     spawn_child("/bin/sh"); // TODO: ntty
