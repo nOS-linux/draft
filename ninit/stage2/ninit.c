@@ -1,8 +1,10 @@
 #include <dirent.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -58,12 +60,34 @@ pid_t spawn_child(const char *path) {
     return pid;
 }
 
+void spawn_getty(const char *tty, const char *shell) {
+    pid_t pid = fork();
+    if (pid < 0) return;
+
+    if (pid == 0) {
+        setsid();
+
+        int fd = open(tty, O_RDWR);
+        if (fd < 0) _exit(EXIT_FAILURE);
+
+        ioctl(fd, TIOCSCTTY, 0);
+
+        dup2(fd, 0); dup2(fd, 1); dup2(fd, 2);
+        if (fd > 2) close(fd);
+
+        char *args[] = {(char *)shell, NULL};
+        execv(args[0], args);
+        _exit(EXIT_FAILURE);
+    }
+}
+
 int main(void) {
     printf("--- ninit stage 2 ---\n");
     if (getpid() != 1) return EXIT_FAILURE;
     setup_signals();
 
-    spawn_child("/bin/sh"); // TODO: ntty
+    printf("spawning getty\n");
+    spawn_getty("/dev/tty1", "/bin/sh");
 
     DIR *dir = opendir("/etc/ninit/services");
     if (dir) {

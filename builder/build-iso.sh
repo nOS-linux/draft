@@ -28,7 +28,7 @@ set timeout=5
 set default=0
 
 menuentry "nOS" {
-    linux /boot/vmlinuz-linux-zen console=ttyS0
+    linux /boot/vmlinuz-linux-zen console=tty1 loglevel=0
     initrd /boot/nos-initramfs-${KVER}.img
 }
 GRUB

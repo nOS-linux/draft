@@ -31,6 +31,7 @@ void reap_zombies(void);
  * @return pid_t PID of the spawned process, or -1 on error.
  */
 pid_t spawn_child(const char *path);
+void spawn_getty(const char *tty, const char *shell);
 
 /**
  * @brief Parses an nsv file and populates the NService structure.

@@ -8,6 +8,13 @@
 
 . ./n.sh
 
+echo '          ____  _____'
+echo '   ____  / __ \/ ___/'
+echo '  / __ \/ / / /\__ \'
+echo ' / / / / /_/ /___/ /'
+echo '/_/ /_/\____//____/'
+echo ''
+
 echo "--- ninit stage 1 ---"
 
 # TODO: mount -> nstorage mount
