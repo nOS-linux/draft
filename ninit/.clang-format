@@ -1,0 +1,13 @@
+---
+BasedOnStyle: LLVM
+IndentWidth: 4
+AccessModifierOffset: -4
+IndentCaseLabels: true
+UseTab: Never
+TabWidth: 4
+ColumnLimit: 80
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: false
+MaxEmptyLinesToKeep: 1
+Standard: Latest
+...
