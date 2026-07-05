@@ -1,64 +1,59 @@
-#include <dirent.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <sys/mount.h>
+#include <sys/select.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "../ninit.h"
 
-void reap_zombies(void) {
-    int status;
-    pid_t pid;
+/* ----------------------------------------------------------------- */
+/*  signal handling                                                   */
+/* ----------------------------------------------------------------- */
 
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-    }
-}
+static volatile int sigchld_received = 0;
+static volatile int shutdown_requested = 0;
+static volatile int saved_sig = 0;
 
 void signal_handler(int sig) {
     switch (sig) {
         case SIGCHLD:
             reap_zombies();
+            sigchld_received = 1;
             break;
         case SIGINT:
         case SIGTERM:
+            shutdown_requested = 1;
+            saved_sig = sig;
             break;
     }
 }
 
 void setup_signals(void) {
     struct sigaction sa;
-
+    struct sigaction sa_norestart;
     memset(&sa, 0, sizeof(sa));
+    memset(&sa_norestart, 0, sizeof(sa_norestart));
+
     sa.sa_handler = signal_handler;
     sigemptyset(&sa.sa_mask);
-
-    // SA_RESTART automatically restarts system calls interrupted by a signal
-    // SA_NOCLDSTOP prevents SIGCHLD from being called when the child is simply
-    // stopped (e.g., by Ctrl+Z)
     sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
-
     sigaction(SIGCHLD, &sa, NULL);
-    sigaction(SIGINT, &sa, NULL);
-    sigaction(SIGTERM, &sa, NULL);
+
+    sa_norestart.sa_handler = signal_handler;
+    sigemptyset(&sa_norestart.sa_mask);
+    sa_norestart.sa_flags = SA_NOCLDSTOP;
+    sigaction(SIGINT, &sa_norestart, NULL);
+    sigaction(SIGTERM, &sa_norestart, NULL);
 }
 
-pid_t spawn_child(const char *path) {
-    pid_t pid = fork();
-
-    if (pid < 0) return -1;
-
-    if (pid == 0) {
-        char *args[] = {(char *)path, NULL};
-        execv(args[0], args);
-        exit(EXIT_FAILURE);
-    }
-    return pid;
-}
+/* ----------------------------------------------------------------- */
+/*  getty spawning                                                    */
+/* ----------------------------------------------------------------- */
 
 void spawn_getty(const char *tty, const char *shell) {
     pid_t pid = fork();
@@ -66,58 +61,78 @@ void spawn_getty(const char *tty, const char *shell) {
 
     if (pid == 0) {
         setsid();
-
         int fd = open(tty, O_RDWR);
-        if (fd < 0) _exit(EXIT_FAILURE);
-
+        if (fd < 0) _exit(1);
         ioctl(fd, TIOCSCTTY, 0);
-
-        dup2(fd, 0);
-        dup2(fd, 1);
-        dup2(fd, 2);
+        dup2(fd, 0); dup2(fd, 1); dup2(fd, 2);
         if (fd > 2) close(fd);
-
         char *args[] = {(char *)shell, NULL};
         execv(args[0], args);
-        _exit(EXIT_FAILURE);
+        _exit(1);
     }
 }
 
+/* ----------------------------------------------------------------- */
+/*  main                                                              */
+/* ----------------------------------------------------------------- */
+
 int main(void) {
     printf("--- ninit stage 2 ---\n");
-    if (getpid() != 1) return EXIT_FAILURE;
+    if (getpid() != 1) return 1;
+
     setup_signals();
 
-    DIR *dir = opendir("/etc/ninit/services");
-    if (dir) {
-        struct dirent *ent;
-        while ((ent = readdir(dir))) {
-            size_t len = strlen(ent->d_name);
-            if (len < 5 || strcmp(ent->d_name + len - 4, ".nsv") != 0) continue;
+    printf("scanning services\n");
+    scan_services();
 
-            char path[296];
-            snprintf(path, sizeof(path), "/etc/ninit/services/%s", ent->d_name);
-
-            NService srv = parse_nsv_file(path);
-            if (srv.name[0] == '\0') continue;
-
-            if (strcmp(srv.autostart, "false") == 0) {
-                printf("skipped %s\n", srv.name);
-                continue;
-            }
-
-            printf("starting %s\n", srv.name);
-            run_service(&srv);
+    for (int i = 0; i < service_count(); i++) {
+        SvcEntry *e = get_service(i);
+        if (e->autost) {
+            printf("  starting %s\n", e->srv.name);
+            svc_start(e->srv.name);
         }
-        closedir(dir);
     }
 
     printf("spawning getty\n");
     spawn_getty("/dev/tty1", "/bin/sh");
+    spawn_getty("/dev/ttyS0", "/bin/sh");
 
-    while (1) {
-        pause();
+    mkfifo(FIFO_PATH, 0666);
+    int fifo_fd = open(FIFO_PATH, O_RDWR | O_NONBLOCK);
+    if (fifo_fd >= 0)
+        fcntl(fifo_fd, F_SETFD, FD_CLOEXEC);
+
+    printf("--- ninit ready ---\n");
+
+    for (;;) {
+        if (shutdown_requested) {
+            printf("received signal %d\n", saved_sig);
+            do_poweroff();
+        }
+
+        struct timeval tv = { 0, 500000 };
+        fd_set fds;
+        FD_ZERO(&fds);
+        if (fifo_fd >= 0)
+            FD_SET(fifo_fd, &fds);
+
+        int nfds = (fifo_fd >= 0) ? fifo_fd + 1 : 0;
+        select(nfds, (fifo_fd >= 0) ? &fds : NULL, NULL, NULL, &tv);
+
+        if (fifo_fd >= 0 && FD_ISSET(fifo_fd, &fds)) {
+            char buf[4096];
+            ssize_t n = read(fifo_fd, buf, sizeof(buf) - 1);
+            if (n > 0) {
+                buf[n] = '\0';
+                process_fifo_buffer(buf, (size_t)n);
+            }
+        }
+
+        if (sigchld_received) {
+            check_restarts();
+            sigchld_received = 0;
+        }
     }
 
-    return EXIT_SUCCESS;
+    return 0;
 }

@@ -1,0 +1,7 @@
+name = "network"
+description = "Network loopback (stub)"
+exec = "/bin/sh -c 'echo network service started; sleep 9999'"
+restart = "on-failure"
+timeout = "1"
+autostart = "true"
+requires = ""

@@ -1,0 +1,7 @@
+name = "test"
+description = "Test service — loops with a message"
+exec = "/bin/sh -c 'while :; do echo test-service running; sleep 5; done'"
+restart = "always"
+timeout = "2"
+autostart = "true"
+requires = "network"

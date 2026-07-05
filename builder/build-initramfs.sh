@@ -12,7 +12,10 @@ trap "rm -rf $INITRAMFS_TMP" EXIT
 echo "nOS initramfs builder"
 echo "Kernel: $KVER"
 
-mkdir -p "$INITRAMFS_TMP"/{bin,dev,etc/ninit/services,root/.ssh,proc,sys,mnt,run}
+for d in bin dev etc/ninit/services root/.ssh proc sys mnt run; do
+    mkdir -p "$INITRAMFS_TMP/$d"
+done
+mkdir -p "$INITRAMFS_TMP/var/log"
 
 cp /usr/bin/busybox "$INITRAMFS_TMP/bin/busybox"
 
@@ -34,7 +37,11 @@ cp "$SRCDIR/etc/passwd" "$INITRAMFS_TMP/etc/"
 cp "$SRCDIR/etc/shadow" "$INITRAMFS_TMP/etc/"
 cp "$SRCDIR/ninit/stage1/init.sh" "$INITRAMFS_TMP/init"
 cp "$SRCDIR/ninit/stage2/ninit" "$INITRAMFS_TMP/ninit"
+cp "$SRCDIR/ninit/nsv/nsv" "$INITRAMFS_TMP/bin/nsv"
+ln -sf /bin/nsv "$INITRAMFS_TMP/bin/poweroff"
+ln -sf /bin/nsv "$INITRAMFS_TMP/bin/reboot"
 cp "$SRCDIR/ninit/stage1/n.sh" "$INITRAMFS_TMP/"
+cp "$SRCDIR/etc/ninit/services/"*.nsv "$INITRAMFS_TMP/etc/ninit/services/" 2>/dev/null || true
 cp "$SRCDIR/bin/pfetch" "$INITRAMFS_TMP/bin/pfetch"
 
 chmod +x "$INITRAMFS_TMP/init" "$INITRAMFS_TMP/n.sh"

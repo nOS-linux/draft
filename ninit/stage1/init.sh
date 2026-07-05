@@ -22,6 +22,7 @@ log "mounting proc/sys/tmpfs/devtmpfs"
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t tmpfs -o size=2M tmpfs /run
+mkdir -p /var/log
 mount -t devtmpfs devtmpfs /dev
 
 mkdir -p /dev/pts

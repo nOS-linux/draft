@@ -2,6 +2,10 @@
 #define NINIT_H
 
 #include <sys/types.h>
+#include <unistd.h>
+
+#define MAX_SERVICES 64
+#define FIFO_PATH "/run/ninit.ctl"
 
 typedef struct {
     char name[64];
@@ -10,40 +14,51 @@ typedef struct {
     char restart[32];
     char timeout[32];
     char autostart[8];
+    char requires[256];
 } NService;
 
-/**
- * @brief Setting up signal handlers (SIGCHLD, SIGINT, SIGTERM).
- * Blocks external attempts to kill PID 1 and prepares the system for zombie
- * collection.
- */
-void setup_signals(void);
+typedef struct {
+    NService srv;
+    char filepath[296];
+    pid_t pid;
+    int active;
+    int autost;
+} SvcEntry;
 
-/**
- * @brief Asynchronously collects all accumulated zombie processes (orphans).
- * Called within the SIGCHLD handler.
- */
-void reap_zombies(void);
+/* service table */
+SvcEntry *find_service(const char *name);
+int service_count(void);
+SvcEntry *get_service(int i);
+void scan_services(void);
 
-/**
- * @brief Spawning the main child process (bootstrap / daemon).
- * @param path Path to the executable file.
- * @return pid_t PID of the spawned process, or -1 on error.
- */
-pid_t spawn_child(const char *path);
-void spawn_getty(const char *tty, const char *shell);
+/* service lifecycle */
+void svc_start(const char *name);
+void svc_stop(const char *name);
+void svc_restart(const char *name);
 
-/**
- * @brief Parses an nsv file and populates the NService structure.
- * @param file_path Path to the nsv file.
- * @return NService The populated NService structure, or an empty structure on error.
- */
+/* autostart toggle */
+void svc_enable(const char *name);
+void svc_disable(const char *name);
+
+/* shutdown */
+void shutdown_all(void);
+void do_poweroff(void);
+void do_reboot(void);
+
+/* main loop */
+void check_restarts(void);
+void process_fifo_buffer(const char *buf, size_t len);
+
+/* nsv parser */
 NService parse_nsv_file(const char *file_path);
 
-/**
- * @brief Runs a service based on the parsed nsv file.
- * @param srv The NService structure to run.
- */
-void run_service(const NService *srv);
+/* process helpers */
+pid_t spawn_child(const char *path);
+pid_t spawn_argv(char **argv);
 
-#endif /* NINIT_H */
+/* signal / getty */
+void setup_signals(void);
+void reap_zombies(void);
+void spawn_getty(const char *tty, const char *shell);
+
+#endif

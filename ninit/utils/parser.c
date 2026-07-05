@@ -5,7 +5,9 @@
 
 #include "../ninit.h"
 
-const char *valid_keys[] = {"name", "description", "exec", "restart", "timeout", "autostart"};
+const char *valid_keys[] = {
+    "name", "description", "exec", "restart", "timeout", "autostart", "requires"
+};
 
 #define KEYS_COUNT (sizeof(valid_keys) / sizeof(valid_keys[0]))
 
@@ -32,9 +34,8 @@ NService parse_nsv_file(const char *file_path) {
     strcpy(srv.autostart, "true");
 
     FILE *file = fopen(file_path, "r");
-    if (!file) {
+    if (!file)
         return srv;
-    }
 
     char line[1280];
     while (fgets(line, sizeof(line), file)) {
@@ -71,19 +72,13 @@ NService parse_nsv_file(const char *file_path) {
             return srv;
         }
 
-        if (strcmp(key, "name") == 0) {
-            trim_and_clean(srv.name, raw_val, sizeof(srv.name));
-        } else if (strcmp(key, "description") == 0) {
-            trim_and_clean(srv.description, raw_val, sizeof(srv.description));
-        } else if (strcmp(key, "exec") == 0) {
-            trim_and_clean(srv.exec, raw_val, sizeof(srv.exec));
-        } else if (strcmp(key, "restart") == 0) {
-            trim_and_clean(srv.restart, raw_val, sizeof(srv.restart));
-        } else if (strcmp(key, "timeout") == 0) {
-            trim_and_clean(srv.timeout, raw_val, sizeof(srv.timeout));
-        } else if (strcmp(key, "autostart") == 0) {
-            trim_and_clean(srv.autostart, raw_val, sizeof(srv.autostart));
-        }
+        if      (strcmp(key, "name")        == 0) trim_and_clean(srv.name,        raw_val, sizeof(srv.name));
+        else if (strcmp(key, "description") == 0) trim_and_clean(srv.description, raw_val, sizeof(srv.description));
+        else if (strcmp(key, "exec")        == 0) trim_and_clean(srv.exec,        raw_val, sizeof(srv.exec));
+        else if (strcmp(key, "restart")     == 0) trim_and_clean(srv.restart,     raw_val, sizeof(srv.restart));
+        else if (strcmp(key, "timeout")     == 0) trim_and_clean(srv.timeout,     raw_val, sizeof(srv.timeout));
+        else if (strcmp(key, "autostart")   == 0) trim_and_clean(srv.autostart,   raw_val, sizeof(srv.autostart));
+        else if (strcmp(key, "requires")    == 0) trim_and_clean(srv.requires,    raw_val, sizeof(srv.requires));
     }
     fclose(file);
 
