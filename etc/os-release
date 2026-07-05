@@ -1,0 +1,9 @@
+NAME=nOS
+ID=nos
+PRETTY_NAME="nOS Linux"
+VERSION_ID=6.18.38
+BUILD_ID=tiny
+ANSI_COLOR="0;34"
+HOME_URL="https://github.com/nOS-linux"
+SUPPORT_URL="https://google.com"
+BUG_REPORT_URL="https://google.com"

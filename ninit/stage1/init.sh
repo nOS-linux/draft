@@ -21,11 +21,16 @@ echo "--- ninit stage 1 ---"
 log "mounting proc/sys/tmpfs/devtmpfs"
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
-mount -t tmpfs tmpfs /run
+mount -t tmpfs -o size=2M tmpfs /run
 mount -t devtmpfs devtmpfs /dev
+
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+ln -sf /dev/pts/ptmx /dev/ptmx
 
 log "scanning devices"
 busybox mdev -s # TODO: mdev -> ndev
+
 
 TARGET_UUID=$(cat /proc/cmdline | grep -o 'root=UUID=[^ ]*' | cut -d= -f3)
 
@@ -42,11 +47,11 @@ done
 
 if [ -z "$ROOT" ]; then
     log "root not found, switching to stage 2"
-    exec /sbin/ninit
+    exec /ninit
 fi
 
 mkdir -p /new_root
 mount -o ro "$ROOT" /new_root # TODO: mount -> nstorage mount
 
 log "switching root"
-exec busybox switch_root /new_root /sbin/ninit # TODO: switch_root -> nstorage switch_root
+exec busybox switch_root /new_root /ninit # TODO: switch_root -> nstorage switch_root

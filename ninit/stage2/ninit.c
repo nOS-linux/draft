@@ -72,7 +72,9 @@ void spawn_getty(const char *tty, const char *shell) {
 
         ioctl(fd, TIOCSCTTY, 0);
 
-        dup2(fd, 0); dup2(fd, 1); dup2(fd, 2);
+        dup2(fd, 0);
+        dup2(fd, 1);
+        dup2(fd, 2);
         if (fd > 2) close(fd);
 
         char *args[] = {(char *)shell, NULL};
@@ -86,34 +88,32 @@ int main(void) {
     if (getpid() != 1) return EXIT_FAILURE;
     setup_signals();
 
-    printf("spawning getty\n");
-    spawn_getty("/dev/tty1", "/bin/sh");
-
     DIR *dir = opendir("/etc/ninit/services");
     if (dir) {
         struct dirent *ent;
         while ((ent = readdir(dir))) {
             size_t len = strlen(ent->d_name);
-            if (len < 5 || strcmp(ent->d_name + len - 4, ".nsv") != 0)
-                continue;
+            if (len < 5 || strcmp(ent->d_name + len - 4, ".nsv") != 0) continue;
 
             char path[296];
             snprintf(path, sizeof(path), "/etc/ninit/services/%s", ent->d_name);
 
             NService srv = parse_nsv_file(path);
-            if (srv.name[0] == '\0')
-                continue;
+            if (srv.name[0] == '\0') continue;
 
             if (strcmp(srv.autostart, "false") == 0) {
                 printf("skipped %s\n", srv.name);
                 continue;
             }
 
-            printf("started %s\n", srv.name);
+            printf("starting %s\n", srv.name);
             run_service(&srv);
         }
         closedir(dir);
     }
+
+    printf("spawning getty\n");
+    spawn_getty("/dev/tty1", "/bin/sh");
 
     while (1) {
         pause();

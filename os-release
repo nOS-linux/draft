@@ -1,8 +1,0 @@
-NAME=nOS
-ID=nos
-PRETTY_NAME="nOS Linux"
-BUILD_ID=hybrid
-ANSI_COLOR="0;34"
-HOME_URL="https://github.com/nOS-linux"
-SUPPORT_URL="https://google.com"
-BUG_REPORT_URL="https://google.com"

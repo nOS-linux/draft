@@ -1,24 +1,25 @@
 #!/bin/sh
 set -e
 
-KVER="$(uname -r)"
+KERNEL_SRC="$(cd "$(dirname "$0")/../linux-6.18.38" && pwd)"
 SRCDIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUTDIR="$SRCDIR"
 INITRAMFS_TMP=$(mktemp -d)
-MODULES_SRC="/lib/modules/$KVER"
+KVER=$(make -C "$KERNEL_SRC" -s kernelrelease 2>/dev/null)
 
 trap "rm -rf $INITRAMFS_TMP" EXIT
 
 echo "nOS initramfs builder"
 echo "Kernel: $KVER"
 
-mkdir -p "$INITRAMFS_TMP"/{bin,dev,etc,proc,sys,mnt,run,new_root}
+mkdir -p "$INITRAMFS_TMP"/{bin,dev,etc/ninit/services,root/.ssh,proc,sys,mnt,run}
 
 cp /usr/bin/busybox "$INITRAMFS_TMP/bin/busybox"
 
 for applet in mount umount cat grep cut seq sleep mkdir mdev sh ls \
               switch_root findfs blkid date echo clear dmesg \
-              modprobe insmod rmmod lsmod readlink ln; do
+              modprobe insmod rmmod lsmod readlink ln \
+              ps pidof kill lsusb lspci free df uname; do
     ln -s /bin/busybox "$INITRAMFS_TMP/bin/$applet"
 done
 
@@ -28,34 +29,15 @@ for applet in mount switch_root findfs blkid modprobe insmod rmmod lsmod; do
 done
 
 mkdir -p "$INITRAMFS_TMP/etc"
-cp "$SRCDIR/os-release" "$INITRAMFS_TMP/etc/os-release"
+cp "$SRCDIR/etc/os-release" "$INITRAMFS_TMP/etc/os-release"
+cp "$SRCDIR/etc/passwd" "$INITRAMFS_TMP/etc/"
+cp "$SRCDIR/etc/shadow" "$INITRAMFS_TMP/etc/"
 cp "$SRCDIR/ninit/stage1/init.sh" "$INITRAMFS_TMP/init"
-cp "$SRCDIR/ninit/stage2/ninit" "$INITRAMFS_TMP/sbin/ninit"
+cp "$SRCDIR/ninit/stage2/ninit" "$INITRAMFS_TMP/ninit"
 cp "$SRCDIR/ninit/stage1/n.sh" "$INITRAMFS_TMP/"
-cp "$SRCDIR/pfetch" "$INITRAMFS_TMP/bin/pfetch"
-chmod +x "$INITRAMFS_TMP/init" "$INITRAMFS_TMP/n.sh"
+cp "$SRCDIR/bin/pfetch" "$INITRAMFS_TMP/bin/pfetch"
 
-if [ -d "$MODULES_SRC/kernel/drivers/nvme" ]; then
-    echo "  -> NVMe modules"
-    mkdir -p "$INITRAMFS_TMP/lib/modules/$KVER"
-    for mod in nvme-keyring hkdf nvme-auth nvme-core nvme; do
-        modpath=$(modinfo -k "$KVER" -n "$mod" 2>/dev/null) || continue
-        relpath="${modpath#$MODULES_SRC/kernel/}"
-        mkdir -p "$INITRAMFS_TMP/lib/modules/$KVER/kernel/$(dirname "$relpath")"
-        case "$modpath" in
-            *.zst)
-                zstd -dfq "$modpath" -o "/tmp/$(basename "${modpath%.zst}")"
-                cp "/tmp/$(basename "${modpath%.zst}")" \
-                   "$INITRAMFS_TMP/lib/modules/$KVER/kernel/${relpath%.zst}"
-                ;;
-            *) cp "$modpath" "$INITRAMFS_TMP/lib/modules/$KVER/kernel/$relpath" ;;
-        esac
-    done
-    if [ -f "$MODULES_SRC/modules.dep" ]; then
-        cp "$MODULES_SRC/modules.dep" "$INITRAMFS_TMP/lib/modules/$KVER/"
-        sed -i 's/\.zst//g' "$INITRAMFS_TMP/lib/modules/$KVER/modules.dep"
-    fi
-fi
+chmod +x "$INITRAMFS_TMP/init" "$INITRAMFS_TMP/n.sh"
 
 INITRAMFS_OUT="$OUTDIR/nos-initramfs-${KVER}.img"
 (
