@@ -9,3 +9,6 @@
 | `useradd`, `usermod`, `passwd`, `groupadd` | **`nuser`** |
 | `journalctl`, `syslogd`, `dmesg` | **`nlog`** |
 | `mdev`, `udevadm`, `lsmod`, `modprobe` | **`ndev`** |
+
+
+<img width="1038" height="904" alt="image" src="https://github.com/user-attachments/assets/1129dc8a-d501-4f57-b387-2b816ae5a7df" />
